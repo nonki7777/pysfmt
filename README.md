@@ -14,6 +14,7 @@ Volunteers for using on OSX will be welcome.
 Created: March 2017
 
 Usage:
+
     import sfmt1_5_1 as sfmt
     sfmt.seed(1234)  # If no arguments, the current time is used as a seed
     sfmt.random()  # generates a pseudorandom floating point number in the range [0.0, 1.0)
