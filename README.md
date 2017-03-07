@@ -1,16 +1,22 @@
 ### pysfmt
 
 SFMT for Python
+
 Implemented with Python 3.5.2 or greater
 
 SFMT - SIMD oriented Fast Mersenne Twister
+
 The original version: SFMT Version 1.5.1 written by C/C++
+
 http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/index.html
 
 Environment: Linux/Windows
+
 * Little Endian
 * Altivec technique is not used
+
 Volunteers for using on OSX will be welcome.
+
 Created: March 2017
 
 Usage:
