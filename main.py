@@ -9,21 +9,32 @@ import sfmt1_5_1 as sfmt
 
 
 def main():
+    array32 = [0] * 100000
+    array32_2 = [0] * 10000
     sf = sfmt.Sfmt(1234)
-    print("sfmt.SFMT_MEXP={}".format(sfmt.SFMT_MEXP))
-    print("sfmt.SFMT_N={}".format(sfmt.SFMT_N))
-    print("sfmt.SFMT_N32={}".format(sfmt.SFMT_N32))
-    print("sfmt.SFMT_N64={}".format(sfmt.SFMT_N64))
-    print("sfmt.SFMT_MSK1={:x}".format(sfmt.SFMT_MSK1))
-    for i in range(0, 100):
+    print(sf.sfmt_get_idstring())
+    print("32 bit generated randoms")
+    print("init_gen_rand__________")
+    for i in range(0, 10000):
         r = sf.sfmt_genrand_uint32()
-        print(r)
+        if i >= 1000:
+            continue
+        print("{:10d} ".format(r), sep='', end='')
+        if i % 5 == 4:
+            print()
 
     print()
+    print("init_by_array__________")
     sf.sfmt_init_by_array([0x1234, 0x5678, 0x9abc, 0xdef0], 4)
-    for i in range(0, 100):
-        r = sf.sfmt_genrand_uint32()
-        print(r)
+    sf.sfmt_fill_array32(array32, 10000)
+    sf.sfmt_fill_array32(array32_2, 10000)
+    for i in range(0, 10000):
+        r = array32[i]
+        if i >= 1000:
+            continue
+        print("{:10d} ".format(r), sep='', end='')
+        if i % 5 == 4:
+            print()
 
     print()
     sf.sfmt_init_gen_rand()
@@ -31,6 +42,9 @@ def main():
         f = sf.sfmt_genrand_real()
         print(f)
 
+    sfmt.seed(1234)
+    print("sfmt.random()=", sfmt.random())
+    print("The above should be (1905350899 / 4294967296) = ", 1905350899.0 / 4294967296.0)
 
 if __name__ == "__main__":
     main()

@@ -139,41 +139,28 @@ class Sfmt:
         self.idx += 1
         return r
 
-    def sfmt_genrand_real(self):
-        """範囲[0,1)の疑似乱数を、浮動小数点で返す"""
-        r = self.sfmt_genrand_uint32()
-        return r * (1.0 / 4294967296.0)
-
     def sfmt_gen_rand_all(self):
-        r1 = SFMT_N - 2
-        r2 = SFMT_N - 1
+        r1 = tuple(self.state[(SFMT_N - 2) * 4 + k] for k in range(0, 4))
+        r2 = tuple(self.state[(SFMT_N - 1) * 4 + k] for k in range(0, 4))
         i = 0
         while i < SFMT_N - SFMT_POS1:
-            self.do_recursion(i, i, i + SFMT_POS1, r1, r2)
+            a = tuple(self.state[i * 4 + k] for k in range(0, 4))
+            b = tuple(self.state[(i + SFMT_POS1) * 4 + k] for k in range(0, 4))
+            r = do_recursion(a, b, r1, r2)
+            for jj in range(0, 4):
+                self.state[i * 4 + jj] = r[jj]
             r1 = r2
-            r2 = i
+            r2 = tuple(self.state[i * 4 + k] for k in range(0, 4))
             i += 1
         while i < SFMT_N:
-            self.do_recursion(i, i, i + SFMT_POS1 - SFMT_N, r1, r2)
+            a = tuple(self.state[i * 4 + k] for k in range(0, 4))
+            b = tuple(self.state[(i + SFMT_POS1 - SFMT_N) * 4 + k] for k in range(0, 4))
+            r = do_recursion(a, b, r1, r2)
+            for jj in range(0, 4):
+                self.state[i * 4 + jj] = r[jj]
             r1 = r2
-            r2 = i
+            r2 = tuple(self.state[i * 4 + k] for k in range(0, 4))
             i += 1
-
-    def do_recursion(self, r, a, b, c, d):
-        aa = tuple(self.state[a * 4 + k] for k in range(0, 4))
-        bb = tuple(self.state[b * 4 + k] for k in range(0, 4))
-        cc = tuple(self.state[c * 4 + k] for k in range(0, 4))
-        dd = tuple(self.state[d * 4 + k] for k in range(0, 4))
-        x = lshift128(aa, SFMT_SL2)
-        y = rshift128(cc, SFMT_SR2)
-        self.state[r * 4] = _int32(aa[0] ^ x[0] ^
-                                   ((bb[0] >> SFMT_SR1) & SFMT_MSK1) ^ y[0] ^ (dd[0] << SFMT_SL1))
-        self.state[r * 4 + 1] = _int32(aa[1] ^ x[1] ^
-                                       ((bb[1] >> SFMT_SR1) & SFMT_MSK2) ^ y[1] ^ (dd[1] << SFMT_SL1))
-        self.state[r * 4 + 2] = _int32(aa[2] ^ x[2] ^
-                                       ((bb[2] >> SFMT_SR1) & SFMT_MSK3) ^ y[2] ^ (dd[2] << SFMT_SL1))
-        self.state[r * 4 + 3] = _int32(aa[3] ^ x[3] ^
-                                       ((bb[3] >> SFMT_SR1) & SFMT_MSK4) ^ y[3] ^ (dd[3] << SFMT_SL1))
 
     def period_certification(self):
         inner = 0
@@ -192,6 +179,72 @@ class Sfmt:
                     self.state[idxof(i)] = _int32(self.state[idxof(i)] ^ work)
                     return
                 work = _int32(work << 1)
+
+    def sfmt_fill_array32(self, arr, size):
+        assert self.idx == SFMT_N32
+        assert size % 4 == 0
+        assert size >= SFMT_N32
+
+        self.gen_rand_array(arr, size)  # arrもsizeもどちらも32bitで考える
+        self.idx = SFMT_N32
+
+    def gen_rand_array(self, ar32, size32):
+        r1 = tuple(self.state[(SFMT_N - 2) * 4 + k] for k in range(0, 4))
+        r2 = tuple(self.state[(SFMT_N - 1) * 4 + k] for k in range(0, 4))
+        i = 0
+        while i < SFMT_N - SFMT_POS1:
+            a = tuple(self.state[i * 4 + k] for k in range(0, 4))
+            b = tuple(self.state[(i + SFMT_POS1) * 4 + k] for k in range(0, 4))
+            r = do_recursion(a, b, r1, r2)
+            for jj in range(0, 4):
+                ar32[i * 4 + jj] = r[jj]
+            r1 = r2
+            r2 = tuple(ar32[i * 4 + k] for k in range(0, 4))
+            i += 1
+        while i < SFMT_N:
+            a = tuple(self.state[i * 4 + k] for k in range(0, 4))
+            b = tuple(ar32[(i + SFMT_POS1 - SFMT_N) * 4 + k] for k in range(0, 4))
+            r = do_recursion(a, b, r1, r2)
+            for jj in range(0, 4):
+                ar32[i * 4 + jj] = r[jj]
+            r1 = r2
+            r2 = tuple(ar32[i * 4 + k] for k in range(0, 4))
+            i += 1
+        while i < size32 // 4 - SFMT_N:
+            a = tuple(ar32[(i - SFMT_N) * 4 + k] for k in range(0, 4))
+            b = tuple(ar32[(i + SFMT_POS1 - SFMT_N) * 4 + k] for k in range(0, 4))
+            r = do_recursion(a, b, r1, r2)
+            for jj in range(0, 4):
+                ar32[i * 4 + jj] = r[jj]
+            r1 = r2
+            r2 = tuple(ar32[i * 4 + k] for k in range(0, 4))
+            i += 1
+        j = 0
+        while j < 2 * SFMT_N - size32 // 4:
+            for jj in range(0, 4):
+                self.state[j * 4 + jj] = ar32[(j + size32 // 4 - SFMT_N) * 4 + jj]
+            j += 1
+        while i < size32 // 4 - SFMT_N:
+            a = tuple(ar32[(i - SFMT_N) * 4 + k] for k in range(0, 4))
+            b = tuple(ar32[(i + SFMT_POS1 - SFMT_N) * 4 + k] for k in range(0, 4))
+            r = do_recursion(a, b, r1, r2)
+            for jj in range(0, 4):
+                ar32[i * 4 + jj] = r[jj]
+            r1 = r2
+            r2 = tuple(ar32[i * 4 + k] for k in range(0, 4))
+            for jj in range(0, 4):
+                self.state[j * 4 + jj] = ar32[i * 4 + jj]
+            i += 1
+            j += 1
+
+    @staticmethod
+    def sfmt_get_idstring():
+        return SFMT_IDSTR
+
+    def sfmt_genrand_real(self):
+        """範囲[0,1)の疑似乱数を、浮動小数点で返す"""
+        r = self.sfmt_genrand_uint32()
+        return r * (1.0 / 4294967296.0)
 
 
 def _int32(x):
@@ -234,3 +287,22 @@ def lshift128(ain, shift):
     oh |= tl >> (64 - shift * 8)
     r = [_int32(ol), _int32(ol >> 32), _int32(oh), _int32(oh >> 32)]
     return tuple(r)
+
+
+def do_recursion(aa, bb, cc, dd):
+    x = lshift128(aa, SFMT_SL2)
+    y = rshift128(cc, SFMT_SR2)
+    r = [0] * 4
+    r[0] = _int32(aa[0] ^ x[0] ^
+                               ((bb[0] >> SFMT_SR1) & SFMT_MSK1) ^ y[0] ^ (dd[0] << SFMT_SL1))
+    r[1] = _int32(aa[1] ^ x[1] ^
+                                   ((bb[1] >> SFMT_SR1) & SFMT_MSK2) ^ y[1] ^ (dd[1] << SFMT_SL1))
+    r[2] = _int32(aa[2] ^ x[2] ^
+                                   ((bb[2] >> SFMT_SR1) & SFMT_MSK3) ^ y[2] ^ (dd[2] << SFMT_SL1))
+    r[3] = _int32(aa[3] ^ x[3] ^
+                                   ((bb[3] >> SFMT_SR1) & SFMT_MSK4) ^ y[3] ^ (dd[3] << SFMT_SL1))
+    return tuple(r)
+
+_a = Sfmt()
+seed = _a.sfmt_init_gen_rand
+random = _a.sfmt_genrand_real
