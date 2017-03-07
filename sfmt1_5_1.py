@@ -2,23 +2,26 @@
 # -*- coding: utf-8 -*-
 # sfmt1_5_1.py
 """
-乱数生成器 SFMT for Python
-C言語で書かれているSFMT Version 1.5.1をPythonに移植
-実行環境はLinux/Windowsを想定する。つまり：
+SFMT for Python
+Implemented with Python 3.5.2 or greater
+
+The original version: SFMT Version 1.5.1 written by C/C++
+http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/index.html
+
+Environment: Linux/Windows
 * Little Endian
-* Altivecというベクトル演算は使わない
-OSXによる動作は確認していない。
-Created on March 3 2017
+* Altivec technique is not used
+Volunteers for using on OSX would be appreciated.
+Created: March 2017
 """
 
-# 共通定数
-SFMT_MEXP = 216091  # 既定は19937だがここでは最長の216091を使ってみる
-SFMT_N = SFMT_MEXP // 128 + 1  # //は切り捨てなので、これは切り上げを意味する
+SFMT_MEXP = 216091  # Trying the largest number: 216091 instead of the popular 19937
+SFMT_N = SFMT_MEXP // 128 + 1  # means round-up
 SFMT_N32 = SFMT_N * 4
 SFMT_N64 = SFMT_N * 2
-# Intel x86 および AMD64 (x86-64) はリトルエンディアン
+# Intel x86 and AMD64 (x86-64) -> little endian
 
-# 以降はMEXP=216091の固有定数
+# Magic numbers for MEXP=216091
 SFMT_POS1 = 627
 SFMT_SL1 = 11
 SFMT_SL2 = 3
@@ -32,7 +35,7 @@ SFMT_PARITY1 = 0xf8000001
 SFMT_PARITY2 = 0x89e80709
 SFMT_PARITY3 = 0x3bd2b64b
 SFMT_PARITY4 = 0x0c64b1e4
-"""ALTI関連の定数は使わない
+"""ALTI parameters are not used here
 SFMT_ALTI_SL1 = (SFMT_SL1, SFMT_SL1, SFMT_SL1, SFMT_SL1)
 SFMT_ALTI_SR1 = (SFMT_SR1, SFMT_SR1, SFMT_SR1, SFMT_SR1)
 SFMT_ALTI_MSK = (SFMT_MSK1, SFMT_MSK2, SFMT_MSK3, SFMT_MSK4)
@@ -46,6 +49,16 @@ SFMT_IDSTR = "SFMT-216091:627-11-3-10-1:bff7bff7-bfffffff-bffffa7f-ffddfbfb"
 
 
 class Sfmt:
+    """
+    SFMT - SIMD oriented Fast Mersenne Twister
+    The magic number 216091 is used as SFMT_MEXP.
+    Usage:
+    >>> import sfmt1_5_1 as sfmt
+    >>> sfmt.seed(1234)  # If no arguments, the current time is used as a seed
+    >>> sfmt.random()  # generates a pseudorandom floating point number in the range [0.0, 1.0)
+    0.44362407620064914
+    """
+
     def __init__(self, seed=None):
         self.state = [0] * SFMT_N32
         self.idx = 0
@@ -131,7 +144,10 @@ class Sfmt:
         self.period_certification()
 
     def sfmt_genrand_uint32(self):
-        """32bitの疑似乱数を、整数で返す"""
+        """
+        returns a 32-bit pseudorandom number.
+        init_ren_rand or init_by_array must be called before this function.
+        """
         if self.idx >= SFMT_N32:
             self.sfmt_gen_rand_all()
             self.idx = 0
@@ -185,7 +201,7 @@ class Sfmt:
         assert size % 4 == 0
         assert size >= SFMT_N32
 
-        self.gen_rand_array(arr, size)  # arrもsizeもどちらも32bitで考える
+        self.gen_rand_array(arr, size)
         self.idx = SFMT_N32
 
     def gen_rand_array(self, ar32, size32):
@@ -242,18 +258,18 @@ class Sfmt:
         return SFMT_IDSTR
 
     def sfmt_genrand_real(self):
-        """範囲[0,1)の疑似乱数を、浮動小数点で返す"""
+        """generates a pseudorandom floating point number in the range [0.0, 1.0)"""
         r = self.sfmt_genrand_uint32()
         return r * (1.0 / 4294967296.0)
 
 
 def _int32(x):
-    """32ビットだけを得る"""
+    """obtains the lower 32-bit only"""
     return int(0xFFFFFFFF & x)
 
 
 def idxof(i):
-    """iはlittle endianのときには何もせずそのまま返す"""
+    """placeholder for big endian"""
     return i
 
 
@@ -294,14 +310,15 @@ def do_recursion(aa, bb, cc, dd):
     y = rshift128(cc, SFMT_SR2)
     r = [0] * 4
     r[0] = _int32(aa[0] ^ x[0] ^
-                               ((bb[0] >> SFMT_SR1) & SFMT_MSK1) ^ y[0] ^ (dd[0] << SFMT_SL1))
+                  ((bb[0] >> SFMT_SR1) & SFMT_MSK1) ^ y[0] ^ (dd[0] << SFMT_SL1))
     r[1] = _int32(aa[1] ^ x[1] ^
-                                   ((bb[1] >> SFMT_SR1) & SFMT_MSK2) ^ y[1] ^ (dd[1] << SFMT_SL1))
+                  ((bb[1] >> SFMT_SR1) & SFMT_MSK2) ^ y[1] ^ (dd[1] << SFMT_SL1))
     r[2] = _int32(aa[2] ^ x[2] ^
-                                   ((bb[2] >> SFMT_SR1) & SFMT_MSK3) ^ y[2] ^ (dd[2] << SFMT_SL1))
+                  ((bb[2] >> SFMT_SR1) & SFMT_MSK3) ^ y[2] ^ (dd[2] << SFMT_SL1))
     r[3] = _int32(aa[3] ^ x[3] ^
-                                   ((bb[3] >> SFMT_SR1) & SFMT_MSK4) ^ y[3] ^ (dd[3] << SFMT_SL1))
+                  ((bb[3] >> SFMT_SR1) & SFMT_MSK4) ^ y[3] ^ (dd[3] << SFMT_SL1))
     return tuple(r)
+
 
 _a = Sfmt()
 seed = _a.sfmt_init_gen_rand
