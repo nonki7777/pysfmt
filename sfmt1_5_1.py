@@ -5,13 +5,14 @@
 SFMT for Python
 Implemented with Python 3.5.2 or greater
 
+SFMT - SIMD oriented Fast Mersenne Twister
 The original version: SFMT Version 1.5.1 written by C/C++
 http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/index.html
 
 Environment: Linux/Windows
 * Little Endian
 * Altivec technique is not used
-Volunteers for using on OSX would be appreciated.
+Volunteers for using on OSX will be welcome.
 Created: March 2017
 """
 
@@ -264,7 +265,7 @@ class Sfmt:
 
 
 def _int32(x):
-    """obtains the lower 32-bit only"""
+    """obtains the lower part of 32-bit only"""
     return int(0xFFFFFFFF & x)
 
 
@@ -274,13 +275,13 @@ def idxof(i):
 
 
 def func1(x):
-    """sfmt_init_by_arrayで使われる"""
+    """used at sfmt_init_by_array()"""
     x = _int32(x)
     return _int32((x ^ (x >> 27)) * 1664525)
 
 
 def func2(x):
-    """sfmt_init_by_arrayで使われる"""
+    """used at sfmt_init_by_array()"""
     x = _int32(x)
     return _int32((x ^ (x >> 27)) * 1566083941)
 
